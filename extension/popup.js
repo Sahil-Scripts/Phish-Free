@@ -133,6 +133,125 @@
               });
             }
           }
+
+          // --- populate CNN / GNN small indicators ---
+          try {
+            // helper to find first candidate key among shallow keys or nested objects
+            function _findFirst(obj, keys) {
+              if (!obj) return undefined;
+              for (const k of keys) {
+                if (obj[k] !== undefined && obj[k] !== null) return obj[k];
+              }
+              // shallow nested search
+              for (const v of Object.values(obj)) {
+                if (v && typeof v === 'object') {
+                  for (const k of keys) {
+                    if (v[k] !== undefined && v[k] !== null) return v[k];
+                  }
+                }
+              }
+              return undefined;
+            }
+
+            // CNN value candidates
+            const candsC = [ 'cnn_score_raw','cnn_score','visual_score','score' ];
+            // prefer top-level keys, then components_raw / components
+            const cvalTop = _findFirst(json, candsC);
+            const cvalCompRaw = (json.components_raw && json.components_raw.cnn) || (json.components && json.components.cnn);
+            const cval = (cvalTop !== undefined ? cvalTop : cvalCompRaw);
+
+            let cnum = 0;
+            if (cval === undefined || cval === null || cval === "") {
+              cnum = 0;
+            } else if (typeof cval === 'number') {
+              cnum = cval;
+            } else {
+              const parsed = parseFloat(String(cval).replace(/[^\d.-]/g, ''));
+              cnum = isNaN(parsed) ? 0 : parsed;
+            }
+
+            let cnorm = cnum;
+            if (cnorm > 1 && cnorm <= 100) cnorm = cnorm / 100.0;
+            if (cnorm > 100) cnorm = Math.min(1, cnorm / 100.0);
+            cnorm = isNaN(cnorm) ? 0 : cnorm;
+
+            // GNN value candidates
+            const candsG = [ 'gnn_score_raw','gnn_score','graph_score','similarity' ];
+            const gvalTop = _findFirst(json, candsG);
+            const gvalCompRaw = (json.components_raw && json.components_raw.gnn) || (json.components && json.components.gnn);
+            const gval = (gvalTop !== undefined ? gvalTop : gvalCompRaw);
+
+            let gnum = 0;
+            if (gval === undefined || gval === null || gval === "") {
+              gnum = 0;
+            } else if (typeof gval === 'number') {
+              gnum = gval;
+            } else {
+              const parsedG = parseFloat(String(gval).replace(/[^\d.-]/g, ''));
+              gnum = isNaN(parsedG) ? 0 : parsedG;
+            }
+
+            let gnorm = gnum;
+            if (gnorm > 1 && gnorm <= 100) gnorm = gnorm / 100.0;
+            if (gnorm > 100) gnorm = Math.min(1, gnorm / 100.0);
+            gnorm = isNaN(gnorm) ? 0 : gnorm;
+
+            const cPct = Math.round(Math.max(0, Math.min(1, cnorm)) * 100);
+            const gPct = Math.round(Math.max(0, Math.min(1, gnorm)) * 100);
+
+            // TEXT value candidates
+            const candsT = [ 'text_score_raw','text_score','text','score' ];
+            const tvalTop = _findFirst(json, candsT);
+            const tvalCompRaw = (json.components_raw && json.components_raw.text) || (json.components && json.components.text);
+            const tval = (tvalTop !== undefined ? tvalTop : tvalCompRaw);
+
+            let tnum = 0;
+            if (tval === undefined || tval === null || tval === "") {
+              tnum = 0;
+            } else if (typeof tval === 'number') {
+              tnum = tval;
+            } else {
+              const parsedT = parseFloat(String(tval).replace(/[^\d.-]/g, ''));
+              tnum = isNaN(parsedT) ? 0 : parsedT;
+            }
+
+            let tnorm = tnum;
+            if (tnorm > 1 && tnorm <= 100) tnorm = tnorm / 100.0;
+            if (tnorm > 100) tnorm = Math.min(1, tnorm / 100.0);
+            tnorm = isNaN(tnorm) ? 0 : tnorm;
+
+            const tPct = Math.round(Math.max(0, Math.min(1, tnorm)) * 100);
+
+            const popupTextEl = document.getElementById('popup_text_pct');
+            const popupTextLabel = document.getElementById('popup_text_label');
+            const popupCnnEl = document.getElementById('popup_cnn_pct');
+            const popupCnnLabel = document.getElementById('popup_cnn_label');
+            const popupGnnEl = document.getElementById('popup_gnn_pct');
+            const popupGnnNeighbors = document.getElementById('popup_gnn_neighbors');
+
+            if (popupTextEl) popupTextEl.textContent = tPct === 0 ? '—' : `${tPct}%`;
+            if (popupTextLabel) {
+              if (tPct === 0) popupTextLabel.textContent = 'No text score';
+              else if (tPct >= 75) popupTextLabel.textContent = 'PHISH-LIKE';
+              else if (tPct >= 40) popupTextLabel.textContent = 'SUSPICIOUS';
+              else popupTextLabel.textContent = 'LIKELY SAFE';
+            }
+
+            if (popupCnnEl) popupCnnEl.textContent = cPct === 0 ? '—' : `${cPct}%`;
+            if (popupCnnLabel) {
+              if (cPct === 0) popupCnnLabel.textContent = 'No visual score';
+              else if (cPct >= 75) popupCnnLabel.textContent = 'PHISH-LIKE';
+              else if (cPct >= 40) popupCnnLabel.textContent = 'SUSPICIOUS';
+              else popupCnnLabel.textContent = 'LIKELY SAFE';
+            }
+
+            if (popupGnnEl) popupGnnEl.textContent = gPct === 0 ? '—' : `${gPct}%`;
+            const neigh = _findFirst(json, ['neighbors_found','gnn_neighbors','neighbors_count','neighbors','top_neighbors_count']) || 0;
+            if (popupGnnNeighbors) popupGnnNeighbors.textContent = `Neighbors: ${neigh || 0}`;
+          } catch (err) {
+            console.warn('popup render model fields error', err);
+          }
+
         } catch (err) {
           console.error("renderResult error:", err);
           safeSetText(status, "Error rendering result");

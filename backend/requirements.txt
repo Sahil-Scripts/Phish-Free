@@ -11,9 +11,9 @@ lightgbm==4.3.0
 # ===========================
 # Deep Learning / ML Models
 # ===========================
-torch==2.2.2+cpu
-torchvision==0.17.2+cpu
-torchaudio==2.2.2+cpu
+torch>=2.2.2
+torchvision>=0.17.2
+torchaudio>=2.2.2
 transformers==4.41.2
 sentence-transformers==3.0.1
 datasets==2.19.0
@@ -24,11 +24,12 @@ evaluate==0.4.2
 # Graph Neural Networks (PyTorch Geometric)
 # Use the CPU wheels to avoid WinError 127
 # ===========================
-torch-geometric==2.5.3
-torch-scatter==2.1.2
-torch-sparse==0.6.18
-torch-cluster==1.6.3
-torch-spline-conv==1.2.2
+torch-geometric>=2.5.3
+# These are omitted from pure pip install since they require the PyG index URL usually.
+# torch-scatter
+# torch-sparse
+# torch-cluster
+# torch-spline-conv
 
 # ===========================
 # Web Backend & APIs

@@ -1,7 +1,14 @@
-# backend/llm_model.py
 import os, torch, numpy as np
-from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer
+import warnings
+
+os.environ["HF_HUB_DISABLE_TELEMETRY"] = "1"
+os.environ["HF_HUB_DISABLE_EXPERIMENTAL_WARNING"] = "1"
+warnings.filterwarnings("ignore", category=UserWarning, module="huggingface_hub")
+
+from transformers import AutoTokenizer, AutoModelForSequenceClassification, TrainingArguments, Trainer, logging as hf_logging
 from datasets import load_dataset, Dataset
+
+hf_logging.set_verbosity_error()
 from sklearn.metrics import accuracy_score, f1_score, roc_auc_score
 
 class TextModel:
