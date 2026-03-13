@@ -68,5 +68,4 @@ pip install -r backend/requirements.txt
 
 ---
 
-## ✨ Credits
-Developed by **Team Vyuhatech** for **Smart India Hackathon (SIH)**.
+

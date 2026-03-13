@@ -1304,6 +1304,219 @@ def graph_reload():
         return jsonify({"ok": False, "error": str(e)}), 500
 
 
+
+# ---------------------------------------------------------------------------
+# /analyze/url-quick  — Demo endpoint: score a URL from its string only.
+# Zero network calls, zero model inference. Purely heuristic.
+# POST { "url": "https://example.com/login?redirect=abc" }
+# Returns { ok, score, label, badge, signals, reasons }
+# ---------------------------------------------------------------------------
+@app.route("/analyze/url-quick", methods=["POST"])
+def analyze_url_quick():
+    """
+    Instant heuristic phishing score derived entirely from the URL string.
+    No DNS, no HTTP, no model — safe for demo / offline use.
+    """
+    try:
+        data = request.get_json(force=True, silent=True) or {}
+    except Exception:
+        data = {}
+
+    raw_url = (data.get("url") or "").strip()
+    if not raw_url:
+        return jsonify({"ok": False, "error": "url field is required"}), 400
+
+    # Normalise: add scheme if missing so urlparse works
+    url_to_parse = raw_url if re.match(r"^https?://", raw_url, re.I) else "http://" + raw_url
+
+    try:
+        parsed = urlparse(url_to_parse)
+    except Exception as e:
+        return jsonify({"ok": False, "error": f"Invalid URL: {e}"}), 400
+
+    scheme   = (parsed.scheme  or "").lower()
+    host     = (parsed.hostname or "").lower()
+    path     = (parsed.path    or "")
+    query    = (parsed.query   or "")
+    fragment = (parsed.fragment or "")
+    full_url = raw_url
+
+    # ---- Known-safe whitelist (instant 0-score exit) ----------------------
+    SAFE_DOMAINS = {
+        "google.com", "www.google.com", "youtube.com", "www.youtube.com",
+        "github.com", "www.github.com", "microsoft.com", "www.microsoft.com",
+        "apple.com", "www.apple.com", "amazon.com", "www.amazon.com",
+        "linkedin.com", "www.linkedin.com", "twitter.com", "x.com",
+        "instagram.com", "facebook.com", "netflix.com", "wikipedia.org",
+        "stackoverflow.com", "reddit.com",
+    }
+    if host in SAFE_DOMAINS:
+        return jsonify({
+            "ok": True, "score": 0.02, "label": "low", "badge": "🟢",
+            "reasons": ["Verified major/well-known domain."],
+            "signals": {"safe_whitelist": True},
+            "url": raw_url,
+        })
+
+    # ---- Individual signal checks -----------------------------------------
+    signals = {}
+    reasons = []
+    score   = 0.0   # accumulated (capped at 1.0)
+
+    # 1. HTTP (not HTTPS)
+    signals["uses_http"] = scheme == "http"
+    if signals["uses_http"]:
+        score += 0.10
+        reasons.append("Uses HTTP instead of HTTPS — connection is unencrypted.")
+
+    # 2. IP address as host
+    ip_pattern = re.compile(r"^\d{1,3}(\.\d{1,3}){3}$")
+    signals["ip_as_host"] = bool(ip_pattern.match(host))
+    if signals["ip_as_host"]:
+        score += 0.25
+        reasons.append("Host is a raw IP address — phishing sites often avoid domain names.")
+
+    # 3. URL total length
+    url_len = len(full_url)
+    signals["url_length"] = url_len
+    if url_len > 100:
+        inc = min(0.15, (url_len - 100) / 400)
+        score += inc
+        reasons.append(f"URL is very long ({url_len} chars) — long URLs are used to hide the true destination.")
+
+    # 4. Excessive subdomains
+    parts = host.split(".")
+    sub_count = max(0, len(parts) - 2)
+    signals["subdomain_count"] = sub_count
+    if sub_count >= 3:
+        score += 0.15
+        reasons.append(f"Unusually deep subdomain structure ({sub_count} levels) — common in phishing URLs.")
+    elif sub_count == 2:
+        score += 0.05
+        reasons.append(f"Multiple subdomains detected ({sub_count} levels).")
+
+    # 5. Suspicious keywords in host
+    HOST_KEYWORDS = [
+        "login", "signin", "secure", "verify", "account", "update",
+        "banking", "paypal", "amazon", "apple", "google", "microsoft",
+        "ebay", "confirm", "password", "credential", "wallet", "crypto",
+        "invoice", "payment", "support", "helpdesk", "service",
+    ]
+    found_host_kw = [kw for kw in HOST_KEYWORDS if kw in host]
+    signals["host_suspicious_keywords"] = found_host_kw
+    if found_host_kw:
+        inc = min(0.25, len(found_host_kw) * 0.08)
+        score += inc
+        reasons.append(f"Suspicious keywords in hostname: {', '.join(found_host_kw)}.")
+
+    # 6. Suspicious keywords in path / query
+    PATH_KEYWORDS = [
+        "login", "signin", "verify", "secure", "account", "password",
+        "update", "confirm", "redirect", "token", "credential", "reset",
+    ]
+    path_query = (path + "?" + query).lower()
+    found_path_kw = [kw for kw in PATH_KEYWORDS if kw in path_query]
+    signals["path_suspicious_keywords"] = found_path_kw
+    if found_path_kw:
+        inc = min(0.15, len(found_path_kw) * 0.05)
+        score += inc
+        reasons.append(f"Suspicious keywords in path/query: {', '.join(found_path_kw)}.")
+
+    # 7. @ symbol in URL (pre-@ part is ignored by browser)
+    signals["has_at_symbol"] = "@" in full_url
+    if signals["has_at_symbol"]:
+        score += 0.20
+        reasons.append("URL contains '@' — the part before '@' is ignored; this is a classic phishing trick.")
+
+    # 8. Double slash after host (redirect abuse)
+    signals["double_slash_in_path"] = "//" in path
+    if signals["double_slash_in_path"]:
+        score += 0.10
+        reasons.append("Double '//' in path — may be used to confuse redirect parsers.")
+
+    # 9. Hex / percent encoding in host
+    signals["hex_encoding_in_host"] = "%" in host
+    if signals["hex_encoding_in_host"]:
+        score += 0.15
+        reasons.append("Percent-encoded characters in host — used to obfuscate the real URL.")
+
+    # 10. Punycode / IDN (internationalized domain — lookalike attack)
+    signals["is_punycode"] = host.startswith("xn--") or any(p.startswith("xn--") for p in parts)
+    if signals["is_punycode"]:
+        score += 0.20
+        reasons.append("Punycode (internationalized) domain detected — may be a Unicode lookalike attack.")
+
+    # 11. Risky TLD
+    RISKY_TLDS = {
+        ".tk", ".ml", ".ga", ".cf", ".gq",   # Freenom free TLDs
+        ".xyz", ".top", ".club", ".online", ".site", ".icu",
+        ".ru", ".cn", ".th", ".ir",
+    }
+    tld = "." + parts[-1] if parts else ""
+    signals["risky_tld"] = tld in RISKY_TLDS
+    if signals["risky_tld"]:
+        score += 0.15
+        reasons.append(f"High-risk TLD '{tld}' — frequently used in phishing campaigns.")
+
+    # 12. Dash-heavy domain (brand-login.evil.com style)
+    dash_count = host.count("-")
+    signals["dash_count"] = dash_count
+    if dash_count >= 2:
+        inc = min(0.15, dash_count * 0.05)
+        score += inc
+        reasons.append(f"Many hyphens ({dash_count}) in domain — often used to mimic legitimate brands.")
+
+    # 13. Numeric characters in domain (e.g. payp4l.com)
+    digits_in_host = sum(c.isdigit() for c in host.replace(".", ""))
+    signals["digits_in_domain"] = digits_in_host
+    if digits_in_host >= 3:
+        score += 0.08
+        reasons.append(f"Multiple digits ({digits_in_host}) in domain — may be a typosquatted version of a real brand.")
+
+    # 14. Non-standard port
+    port = parsed.port
+    signals["non_standard_port"] = port not in (None, 80, 443)
+    if signals["non_standard_port"]:
+        score += 0.10
+        reasons.append(f"Non-standard port ({port}) — legitimate sites rarely use custom ports.")
+
+    # 15. Fragment used (rare in phishing but worth noting for obfuscation)
+    signals["has_fragment"] = bool(fragment)
+
+    # 16. Many query parameters (data harvesting)
+    param_count = len(query.split("&")) if query else 0
+    signals["query_param_count"] = param_count
+    if param_count >= 5:
+        score += 0.07
+        reasons.append(f"Many query parameters ({param_count}) — may be harvesting user data via the URL.")
+
+    # ---- Clamp and label ---------------------------------------------------
+    score = round(min(1.0, max(0.0, score)), 4)
+
+    if score < 0.25:
+        label, badge = "low",    "🟢"
+    elif score < 0.55:
+        label, badge = "medium", "🟡"
+    else:
+        label, badge = "high",   "🔴"
+
+    if not reasons:
+        reasons.append("No suspicious signals detected in the URL structure.")
+
+    return jsonify({
+        "ok":      True,
+        "url":     raw_url,
+        "score":   score,
+        "label":   label,
+        "badge":   badge,
+        "reasons": reasons,
+        "signals": signals,
+        "method":  "url-heuristic-only",
+        "note":    "Score based purely on URL structure — no network calls or ML models used.",
+    })
+
+
 if __name__=="__main__":
+
     port=int(os.environ.get("PORT",5000))
     app.run(host="0.0.0.0",port=port,debug=True)
