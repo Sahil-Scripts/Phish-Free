@@ -350,6 +350,9 @@ except Exception as e:
 cnn_scorer = None
 try:
     cnn_scorer = CNNScorer()
+    templates_dir = os.path.join(os.path.dirname(__file__), "templates")
+    if os.path.exists(templates_dir):
+        cnn_scorer.compute_brand_embeddings(templates_dir)
     app.logger.info("CNNScorer initialized successfully")
 except Exception as e:
     app.logger.warning("CNNScorer init failed: %s", e)
@@ -1176,6 +1179,19 @@ def analyze_multi():
     if any(domain.lower().endswith(tld) for tld in trust_tlds):
         agent_override_score = 0.05
         agent_reasons.append(f"AI Agent: High-trust TLD detected ({domain.split('.')[-1]}).")
+
+    # 2.5 Edge Case Threat Scanners (Piracy/Proxies/Torrent)
+    # E.g. "pirate bay proxy", "torrent", unblockers
+    bad_keywords = ["pirate bay", "thepiratebay", "torrent proxy", "1337x", "yts.", "free movies", "crack download", "unblock proxy"]
+    text_lower = text.lower()
+    domain_lower = domain.lower()
+    
+    # Only run threat check if it's not a verified safe site
+    if not is_major and agent_override_score is None:
+        detected_threat = next((kw for kw in bad_keywords if kw in domain_lower or kw in text_lower), None)
+        if detected_threat:
+            agent_override_score = 0.95
+            agent_reasons.append(f"AI Agent: ALERT - Known malicious/edge-case pattern detected ('{detected_threat}').")
 
     # 3. Brand Impersonation Detection (CNN Cross-Ref)
     if isinstance(raw_c_res, dict):

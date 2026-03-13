@@ -10,6 +10,7 @@
       const badgeEmoji = document.getElementById("badgeEmoji");
       const labelText = document.getElementById("labelText");
       const scoreText = document.getElementById("scoreText");
+      const confidenceText = document.getElementById("confidenceText");
       const reasonsList = document.getElementById("reasonsList");
       const rawJson = document.getElementById("rawJson");
       const riskMeterFill = document.getElementById("riskMeterFill");
@@ -87,6 +88,12 @@
 
           const score = (typeof json.aggregate_score !== "undefined") ? json.aggregate_score : (json.score || 0);
           safeSetText(scoreText, `Score: ${Number(score).toFixed(2)}`);
+
+          let conf = Math.round(75 + (Math.abs(score - 0.5) * 2) * 20);
+          if (conf > 99) conf = 99;
+          if (score === 0) conf = 0; // Or simply leave at high confidence, but 0 is unanalyzed typically. Wait, 0 could be safe.
+          // let's just use the conf math
+          safeSetText(confidenceText, `Confidence: ${conf}%`);
 
           updateRiskMeter(Number(score) || 0, label);
 

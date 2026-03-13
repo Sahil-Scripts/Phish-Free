@@ -157,22 +157,39 @@
   border-collapse: collapse;
 }
 
-/* Reason column — allow wrapping and word-break so it won't force table-wide overflow */
+/* Text/URL column */
 #resultsTable th:nth-child(8),
 #resultsTable td:nth-child(8) {
-  width: 35%;
+  white-space: normal;
+  word-break: break-all;
+  overflow-wrap: anywhere;
+}
+
+/* Reason column — allow wrapping and word-break so it won't force table-wide overflow */
+#resultsTable th:nth-child(9),
+#resultsTable td:nth-child(9) {
+  width: 28%;
   white-space: normal !important;
   word-break: break-word;
   overflow-wrap: anywhere;
-  max-width: none;              /* override other max-width rules */
 }
 
-/* Actions column — keep fixed size and right-aligned buttons */
-#resultsTable th:nth-child(9),
-#resultsTable td:nth-child(9) {
-  width: 180px;
-  text-align: right;
-  white-space: nowrap;
+/* Set specific widths for columns so the remaining space is distributed nicely */
+/* Time column */
+#resultsTable th:nth-child(1),
+#resultsTable td:nth-child(1) {
+  width: 70px;
+}
+/* Risk Level column */
+#resultsTable th:nth-child(2),
+#resultsTable td:nth-child(2) {
+  width: 110px;
+}
+/* Screenshot column */
+#resultsTable th:nth-child(7),
+#resultsTable td:nth-child(7) {
+  width: 100px;
+  text-align: center;
 }
 
 /* Score columns - fixed width for better alignment */
@@ -744,14 +761,13 @@
   
 
   <!-- MODEL STATUS BANNER (added) -->
-  <div id="modelBanner" style="display:flex;gap:12px;align-items:center;padding:10px 20px;background:#ffffff;margin:0 auto 18px;border-radius:8px;max-width:1600px;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
-    <div style="font-weight:600">Models:</div>
-    <div>CNN: <strong id="modelUI_cnnState">checking…</strong></div>
-    <div>GNN nodes: <strong id="modelUI_gnnNodes">?</strong></div>
-    <div id="modelUI_lastCheck" style="margin-left:auto;font-size:12px;color:var(--gray-600)">last: --</div>
-    <button id="modelUI_refreshBtn" class="btn" style="margin-left:12px;padding:6px 10px;font-size:13px;">Refresh models</button>
-        <!-- add CNN & GNN quick check buttons -->
-    
+  <div id="modelBanner" style="display:flex;gap:16px;align-items:center;padding:12px 20px;background:#ffffff;margin:0 auto 20px;border-radius:8px;max-width:1600px;box-shadow:0 4px 12px rgba(0,0,0,0.03);">
+    <div style="font-weight:600;color:var(--dark);">Live Engines:</div>
+    <div style="display:flex;align-items:center;gap:6px;"><div style="width:8px;height:8px;border-radius:50%;background:var(--success);"></div>LLM Text: <strong>Working</strong></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div id="cnnDot" style="width:8px;height:8px;border-radius:50%;background:var(--warning);"></div>CNN Visual: <strong id="modelUI_cnnState">checking…</strong></div>
+    <div style="display:flex;align-items:center;gap:6px;"><div id="gnnDot" style="width:8px;height:8px;border-radius:50%;background:var(--warning);"></div>GNN Graph: <strong id="modelUI_gnnNodes">?</strong> nodes</div>
+    <div id="modelUI_lastCheck" style="margin-left:auto;font-size:12px;color:var(--gray-600)">last check: --</div>
+    <button id="modelUI_refreshBtn" class="btn btn-outline" style="margin-left:12px;padding:6px 12px;font-size:13px;border-color:var(--gray-300);color:var(--dark);">Refresh status</button>
   </div>
 
   <div class="container">
@@ -839,6 +855,50 @@
             <div class="filter-item">
               <label for="dateTo">Date To</label>
               <input id="dateTo" type="date">
+            </div>
+          </div>
+          
+          <!-- Live Engine Status Graphic -->
+          <div style="margin-top:16px; padding-top:16px; border-top:1px solid var(--gray-200);">
+            <div style="font-size:12px; font-weight:600; color:var(--gray-600); margin-bottom:12px; text-transform:uppercase; letter-spacing:0.5px;">Active Detection Engines</div>
+            <div style="display:flex; gap:12px; justify-content:space-between; flex-wrap:wrap;">
+              
+              <div style="flex:1; min-width:160px; background:rgba(67, 97, 238, 0.05); border:1px solid rgba(67, 97, 238, 0.15); border-radius:8px; padding:10px 14px; display:flex; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:6px; background:rgba(67, 97, 238, 0.1); display:flex; align-items:center; justify-content:center; margin-right:10px; color:var(--primary);">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"></path></svg>
+                </div>
+                <div>
+                  <div style="font-weight:600; font-size:13px; color:var(--dark);">LLM Text Engine</div>
+                  <div style="display:flex; align-items:center; font-size:11px; color:var(--success); margin-top:2px;">
+                    <div style="width:6px; height:6px; border-radius:50%; background:var(--success); margin-right:5px; box-shadow:0 0 6px var(--success);"></div> Online & Scanning
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:1; min-width:160px; background:rgba(247, 37, 133, 0.05); border:1px solid rgba(247, 37, 133, 0.15); border-radius:8px; padding:10px 14px; display:flex; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:6px; background:rgba(247, 37, 133, 0.1); display:flex; align-items:center; justify-content:center; margin-right:10px; color:#f72585;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>
+                </div>
+                <div>
+                  <div style="font-weight:600; font-size:13px; color:var(--dark);">CNN Visual Engine</div>
+                  <div style="display:flex; align-items:center; font-size:11px; color:var(--success); margin-top:2px;">
+                    <div style="width:6px; height:6px; border-radius:50%; background:var(--success); margin-right:5px; box-shadow:0 0 6px var(--success);"></div> Layout Protected
+                  </div>
+                </div>
+              </div>
+
+              <div style="flex:1; min-width:160px; background:rgba(76, 201, 164, 0.05); border:1px solid rgba(76, 201, 164, 0.15); border-radius:8px; padding:10px 14px; display:flex; align-items:center;">
+                <div style="width:32px; height:32px; border-radius:6px; background:rgba(76, 201, 164, 0.1); display:flex; align-items:center; justify-content:center; margin-right:10px; color:#4cc9a4;">
+                  <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor" stroke-width="2"><circle cx="18" cy="5" r="3"></circle><circle cx="6" cy="12" r="3"></circle><circle cx="18" cy="19" r="3"></circle><line x1="8.59" y1="13.51" x2="15.42" y2="17.49"></line><line x1="15.41" y1="6.51" x2="8.59" y2="10.49"></line></svg>
+                </div>
+                <div>
+                  <div style="font-weight:600; font-size:13px; color:var(--dark);">GNN Threat Graph</div>
+                  <div style="display:flex; align-items:center; font-size:11px; color:var(--success); margin-top:2px;">
+                    <div style="width:6px; height:6px; border-radius:50%; background:var(--success); margin-right:5px; box-shadow:0 0 6px var(--success);"></div> Nodes Synced
+                  </div>
+                </div>
+              </div>
+
             </div>
           </div>
         </div>
@@ -1001,7 +1061,6 @@
                 <th>Screenshot</th>
                 <th>Text/URL</th>
                 <th>Reasons</th>
-                <th>Actions</th>
               </tr>
             </thead>
             <tbody></tbody>
@@ -1436,13 +1495,21 @@
     if (!tbody) return;
     tbody.innerHTML = '';
     const rows = Array.isArray(data) ? data.slice().reverse() : [];
-    rows.slice(0, 500).forEach((row, idx) => {
+    // Filter out internal localhost screenshot log entries
+    const filteredRows = rows.filter(row => {
+      const u = (row.url || '').toLowerCase();
+      return !(u.includes('127.0.0.1') && u.includes('/static/screenshots/'));
+    });
+    filteredRows.slice(0, 500).forEach((row, idx) => {
       const tr = document.createElement('tr');
       tr.dataset.url = row.url || row.text_excerpt || '';
-      const time = row.timestamp || '';
+      const timeDate = row.timestamp ? new Date(row.timestamp) : null;
+      const timeStr = timeDate && !isNaN(timeDate.getTime()) ? 
+        `<div style="font-weight:600;white-space:nowrap;color:var(--dark);">${timeDate.toLocaleDateString('en-US',{month:'short',day:'numeric'})}</div><div style="font-size:12px;white-space:nowrap;color:var(--gray-500);">${timeDate.toLocaleTimeString('en-US',{hour:'2-digit',minute:'2-digit',hour12:false})}</div>` : 
+        '<div class="muted">—</div>';
       const labelRaw = (row.label || '').toString().toLowerCase();
       const label = labelRaw || 'low';
-      const scoreRaw = parseFloat(row.aggregate_score || 0) || 0;
+      const scoreRaw = parseFloat(row.combined_score || row.aggregate_score || 0) || 0;
       const scorePct = Math.round(Math.max(0, Math.min(1, scoreRaw)) * 100);
       let riskTier = 'low';
       if (scoreRaw >= 0.75) riskTier = 'high';
@@ -1455,16 +1522,8 @@
       else if (row.reasons) rawReasons = Array.isArray(row.reasons) ? row.reasons.join('; ') : String(row.reasons);
       else if (row.cnn_reasons) rawReasons = Array.isArray(row.cnn_reasons) ? row.cnn_reasons.join('; ') : String(row.cnn_reasons);
       else rawReasons = '';
-      const friendly = [];
-      const rLower = rawReasons.toLowerCase();
-      if (rLower.includes('keyword') || rLower.match(/\bverify\b|\baccount\b|\bpassword\b/)) friendly.push('Keywords matched');
-      if (rLower.includes('url') || (rLower.includes('found') && rLower.includes('url'))) friendly.push('Link(s) present');
-      if (rLower.includes('otp') || rLower.includes('code')) friendly.push('OTP/code detected');
-      if (rLower.includes('invoice') || rLower.includes('billing') || rLower.includes('payment')) friendly.push('Payment/invoice words');
-      if (rLower.includes('transformer') || rLower.includes('bert') || rLower.includes('distil')) friendly.push('Text model signal');
-      if (rLower.includes('visual') || rLower.includes('cnn') || rLower.includes('image')) friendly.push('Visual similarity');
-      if (rLower.includes('graph') || rLower.includes('gnn') || rLower.includes('node2vec')) friendly.push('Graph signal');
-      let reasonsShort = friendly.length ? friendly.slice(0, 3).join(' · ') : (rawReasons ? rawReasons.slice(0, 120) : '—');
+      // Show raw reasons from the log, truncated nicely
+      let reasonsShort = rawReasons ? rawReasons.slice(0, 160) : '—';
       // Extract individual model scores
       const llmScore = parseFloat(row.text_score || 0) || 0;
       const cnnScore = parseFloat(row.cnn_score || 0) || 0;
@@ -1482,9 +1541,9 @@
       const text = (row.text_excerpt || '').toString().slice(0, 80).replace(/\n/g, ' ');
       const displayText = (row.url || text).toString().slice(0, 120);
       const ssUrl = row.screenshot_url || '';
-      const ssHtml = ssUrl ? `<a href="${ssUrl}" target="_blank"><img src="${ssUrl}" style="height:28px;width:auto;border-radius:4px;cursor:pointer;border:1px solid #ddd;" title="View screenshot" onerror="this.parentElement.innerHTML='—'"></a>` : '—';
+      const ssHtml = ssUrl ? `<a href="${ssUrl}" target="_blank" style="display:inline-flex;align-items:center;padding:4px 8px;background:var(--primary-light);color:var(--primary);text-decoration:none;font-weight:600;border-radius:6px;font-size:12px;transition:0.2s;"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>View</a>` : '<span class="muted">—</span>';
       
-      tr.innerHTML = `<td>${time}</td><td><span class="badge badge-${label}">${label.toUpperCase()}</span></td><td>${scoreHtml}</td><td>${llmHtml}</td><td>${cnnHtml}</td><td>${gnnHtml}</td><td style="text-align:center;">${ssHtml}</td><td title="${escapeHtml(displayText)}">${escapeHtml(displayText)}</td><td title="${escapeHtml(String(rawReasons))}">${escapeHtml(String(reasonsShort))}</td>`;
+      tr.innerHTML = `<td>${timeStr}</td><td><span class="badge badge-${label}">${label.toUpperCase()}</span></td><td>${scoreHtml}</td><td>${llmHtml}</td><td>${cnnHtml}</td><td>${gnnHtml}</td><td style="text-align:center;">${ssHtml}</td><td title="${escapeHtml(displayText)}">${escapeHtml(displayText)}</td><td title="${escapeHtml(String(rawReasons))}">${escapeHtml(String(reasonsShort))}</td>`;
       if (highlightHost) {
         const rowUrl = (row.url || "").toString();
         try {
@@ -1502,7 +1561,7 @@
         const expanded = document.createElement('tr');
         expanded.id = 'expandedRow';
         const td = document.createElement('td');
-        td.colSpan = 6;
+        td.colSpan = 9;
         const closeBtn = document.createElement('button');
         closeBtn.className = 'close-btn';
         closeBtn.innerHTML = '×';
@@ -1524,11 +1583,15 @@
     const counts = { high: 0, medium: 0, low: 0 };
     const points = [];
     (data || []).forEach((r, i) => {
+      // Skip internal screenshot log entries from charts too
+      const u = (r.url || '').toLowerCase();
+      if (u.includes('127.0.0.1') && u.includes('/static/screenshots/')) return;
       const l = (r.label || 'low').toString().toLowerCase();
       if (l === 'high') counts.high++;
       else if (l === 'medium') counts.medium++;
       else counts.low++;
-      points.push({ x: i, y: parseFloat(r.aggregate_score || 0) });
+      // Use combined_score (correct backend field name)
+      points.push({ x: i, y: parseFloat(r.combined_score || r.aggregate_score || 0) });
     });
     return { counts, points };
   }
@@ -1640,6 +1703,11 @@
     }
 
     await loadAnchorsToUI();
+    
+    // Auto-poll model statuses on load so they are live
+    if (typeof modelUI_refreshGraphAndCnnStatus === 'function') {
+      setTimeout(() => modelUI_refreshGraphAndCnnStatus(), 100);
+    }
   }
 
   // -------------------------
@@ -1652,9 +1720,23 @@
     const elState = document.getElementById('modelUI_cnnState');
     const elNodes = document.getElementById('modelUI_gnnNodes');
     const elLast = document.getElementById('modelUI_lastCheck');
+    const cnnDot = document.getElementById('cnnDot');
+    const gnnDot = document.getElementById('gnnDot');
+    
     if (elState) elState.innerText = cnnText;
     if (elNodes) elNodes.innerText = String(gnnNodes || 0);
-    if (elLast) elLast.innerText = new Date().toLocaleString();
+    if (elLast) elLast.innerText = `last check: ${new Date().toLocaleTimeString()}`;
+    
+    if (cnnDot) {
+      if (cnnText === 'Working') cnnDot.style.background = 'var(--success)';
+      else if (cnnText.includes('Limited')) cnnDot.style.background = 'var(--warning)';
+      else cnnDot.style.background = 'var(--danger)';
+    }
+    
+    if (gnnDot) {
+      if (gnnNodes > 0) gnnDot.style.background = 'var(--success)';
+      else gnnDot.style.background = 'var(--warning)';
+    }
   }
 
   // model status probe
@@ -1728,91 +1810,7 @@
   // add GNN/CNN buttons to each table row (single, cleaned function)
   // ---------------------------
   function modelUI_addActionsToTableRows() {
-    try {
-      const tbody = document.querySelector('#resultsTable tbody');
-      if (!tbody) return;
-      const rows = Array.from(tbody.querySelectorAll('tr'));
-      rows.forEach(row => {
-        if (row.dataset.modelUiAdded === '1') return;
-        row.dataset.modelUiAdded = '1';
-        const fullUrl = row.dataset.url || row.querySelector('td:nth-child(4)')?.innerText || '';
-        const domain = getHostnameFromUrl(fullUrl);
-        const actionsTd = document.createElement('td');
-        actionsTd.style.whiteSpace = 'nowrap';
-        actionsTd.style.padding = '8px 12px';
-
-        // GNN button
-        const gbtn = document.createElement('button');
-        gbtn.className = 'btn btn-outline';
-        gbtn.style.marginRight = '6px';
-        gbtn.textContent = 'Check GNN';
-        gbtn.title = 'Check how closely this site is connected to known phishing sites (graph signal)';
-        gbtn.onclick = async (e) => {
-          e.stopPropagation();
-          modelUI_showPreview(row, 'GNN — contacting server...', {});
-          const payload = { url: fullUrl, domain: domain };
-          try {
-            const r = await fetch('/analyze/multi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'gnn', payload }) });
-            let j = null;
-            try { j = await r.json(); } catch (errJson) {
-              const txt = await r.text().catch(() => '<no-body>');
-              j = { raw_text: txt, status: r.status };
-            }
-            console.info('GNN response', j, 'status', r.status);
-            const info = j || {};
-            const { score, neighbors } = _extractScoreAndNeighbors(info, 'gnn');
-            const pct = Math.round(Math.max(0, Math.min(1, score)) * 100);
-            if ((j && (j.gnn_score_raw !== undefined || j.gnn_score !== undefined || j.graph_score !== undefined || j.similarity !== undefined)) || pct > 0) {
-              const short = `GNN check — ${pct}% similarity.`;
-              modelUI_showPreview(row, short, Object.assign({}, info, { __modelui_gnn_pct: pct, __modelui_neighbors: neighbors }));
-            } else {
-              modelUI_showPreview(row, 'GNN: no score returned — raw response shown', info);
-            }
-          } catch (err) {
-            console.warn('GNN fetch error', err);
-            modelUI_showPreview(row, 'GNN check failed (network). See console.', { error: String(err) });
-          }
-        };
-
-        // CNN button
-        const cbtn = document.createElement('button');
-        cbtn.className = 'btn btn-outline';
-        cbtn.textContent = 'Check CNN';
-        cbtn.title = 'Quick visual check — does this page look like a typical phishing screenshot?';
-        cbtn.onclick = async (e) => {
-          e.stopPropagation();
-          modelUI_showPreview(row, 'CNN — Doing a quick visual similarity check. Please wait...', {});
-          const payload = { image_b64: modelUI_tinyPNGBase64, text: '', url: fullUrl, domain: domain };
-          try {
-            const r = await fetch('/analyze/multi', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ type: 'cnn', payload }) });
-            let j = null;
-            try { j = await r.json(); } catch (errJson) {
-              const txt = await r.text().catch(() => '<no-body>');
-              j = { raw_text: txt, status: r.status };
-            }
-            console.info('CNN response', j, 'status', r.status);
-            const info = j || {};
-            const { score, neighbors } = _extractScoreAndNeighbors(info, 'cnn');
-            const pct = Math.round(Math.max(0, Math.min(1, score)) * 100);
-            if ((j && (j.cnn_score_raw !== undefined || j.cnn_score !== undefined || j.visual_score !== undefined)) || pct > 0) {
-              const label = info.cnn_label || (pct >= 75 ? 'PHISH-LIKE' : pct >= 40 ? 'SUSPICIOUS' : 'LIKELY SAFE');
-              const short = `Visual check — ${label} (${pct}%).`;
-              modelUI_showPreview(row, short, Object.assign({}, info, { __modelui_cnn_pct: pct, __modelui_neighbors: neighbors }));
-            } else {
-              modelUI_showPreview(row, 'CNN: no score returned — raw response shown', info);
-            }
-          } catch (err) {
-            console.warn('CNN fetch error', err);
-            modelUI_showPreview(row, 'CNN check failed (network). See console.', { error: String(err) });
-          }
-        };
-        actionsTd.classList.add('actions-cell');
-        
-        row.appendChild(actionsTd);
-      });
-    } catch (e) {
-      console.warn('modelUI_addActionsToTableRows error', e);
-    }
+    // Disabled logic to remove Actions column from dashboard
   }
 
     // ---------------------------

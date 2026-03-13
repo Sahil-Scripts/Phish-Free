@@ -368,8 +368,25 @@ const modelMini = `<div style="margin-left:8px;font-size:12px;opacity:0.95">
 // Add reported safe indicator
 const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;color:rgba(255,255,255,0.9);background:rgba(0,255,0,0.2);padding:2px 6px;border-radius:4px;display:inline-block;">✓ Reported Safe</div>` : '';
 
-      const bullets = buildThreatPaths(result);
-      if (!bullets.length) bullets.push("Suspicious signals detected (no detailed reasons available).");
+      const bullets = [];
+      const rawReasons = result.combined_reasons || result.reasons || [];
+      
+      if (Array.isArray(rawReasons) && rawReasons.length > 0) {
+        // use specific reasons from backend models
+        rawReasons.forEach(r => bullets.push(r));
+      } else {
+        // fallback to precanned text
+        const threats = buildThreatPaths(result);
+        if (threats.length) bullets.push(...threats);
+      }
+
+      // try parsing domain age from common backend fields
+      const age = result.domain_age_days ?? result.domain_age ?? (result.whois && result.whois.age_days) ?? (result.url && result.url.domain_age_days) ?? (result.features && result.features.domain_age_days);
+      if (age !== undefined && age !== null && age >= 0) {
+        bullets.push(`Domain Age: ${age} days`);
+      }
+      
+      if (!bullets.length) bullets.push("Analysis complete. No immediate specific risk signals.");
 
       // create root banner
       const banner = document.createElement("div");
@@ -479,66 +496,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
         expandToggle.dataset.open = showing ? "0" : "1";
       });
 
-      // New: details block that shows model-specific fields (GNN / CNN) plus raw JSON
-      const detailBox = document.createElement("details");
-      detailBox.style.marginTop = "8px";
-      const summary = document.createElement("summary");
-      summary.textContent = "Show raw details (models)";
-      summary.style.cursor = "pointer";
-      summary.style.fontSize = "13px";
-      summary.style.color = "rgba(255,255,255,0.92)";
-      detailBox.appendChild(summary);
 
-      // Build contents (GNN / CNN preferred fields)
-      const modelsDiv = document.createElement("div");
-      modelsDiv.style.marginTop = "8px";
-      modelsDiv.style.fontSize = "13px";
-      modelsDiv.style.color = "rgba(255,255,255,0.95)";
-      try {
-        // try to extract common keys - non-fatal if absent
-        const gnnScore = result.gnn_score_raw ?? result.gnn_score ?? result.graph_score ?? result.score_raw ?? result.score;
-        const gnnNeighbors = result.neighbors_found ?? result.gnn_neighbors ?? result.neighbors_count ?? result.neighbors;
-        const cnnScore = result.cnn_score_raw ?? result.cnn_score ?? result.visual_score;
-        const bestBrand = (result.cnn && result.cnn.best_brand) || result.best_brand || "";
-        if (gnnScore !== undefined) {
-          const p = document.createElement("div");
-          p.textContent = `GNN score: ${String(gnnScore)}`;
-          modelsDiv.appendChild(p);
-        }
-        if (gnnNeighbors !== undefined) {
-          const p = document.createElement("div");
-          p.textContent = `GNN neighbors: ${String(gnnNeighbors)}`;
-          modelsDiv.appendChild(p);
-        }
-        if (cnnScore !== undefined) {
-          const p = document.createElement("div");
-          p.textContent = `CNN visual score: ${String(cnnScore)}`;
-          modelsDiv.appendChild(p);
-        }
-        if (bestBrand) {
-          const p = document.createElement("div");
-          p.textContent = `CNN best match: ${String(bestBrand)}`;
-          modelsDiv.appendChild(p);
-        }
-      } catch (e) {
-        console.warn("banner model fields extract error", e);
-      }
-
-      // fallback: raw JSON viewer
-      const rawPre = document.createElement("pre");
-      rawPre.style.whiteSpace = "pre-wrap";
-      rawPre.style.marginTop = "8px";
-      rawPre.style.background = "rgba(255,255,255,0.05)";
-      rawPre.style.padding = "8px";
-      rawPre.style.borderRadius = "6px";
-      try {
-        rawPre.textContent = JSON.stringify(result, null, 2);
-      } catch (e) {
-        rawPre.textContent = String(result);
-      }
-
-      detailBox.appendChild(modelsDiv);
-      detailBox.appendChild(rawPre);
 
       const what = document.createElement("div");
       what.style.marginTop = "8px";
@@ -548,7 +506,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
 
       center.appendChild(list);
       center.appendChild(expandToggle);
-      center.appendChild(detailBox);
+      // center.appendChild(detailBox); (Removed)
       center.appendChild(what);
 
            // Right: actions

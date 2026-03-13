@@ -52,21 +52,21 @@ def combine_scores(text_score: float,
 
     if weights is None:
         weights = {"text": 0.6, "cnn": 0.2, "gnn": 0.2}
-    # ensure keys present
-    w_text = float(weights.get("text", 0.0))
-    w_cnn = float(weights.get("cnn", 0.0))
-    w_gnn = float(weights.get("gnn", 0.0))
+    # get raw weights
+    w_text_raw = float(weights.get("text", 0.0))
+    w_cnn_raw = float(weights.get("cnn", 0.0))
+    w_gnn_raw = float(weights.get("gnn", 0.0))
+    
+    # zero out weights for missing components
+    w_text = w_text_raw if text_score is not None else 0.0
+    w_cnn = w_cnn_raw if cnn_score is not None else 0.0
+    w_gnn = w_gnn_raw if gnn_score is not None else 0.0
+    
     s = w_text + w_cnn + w_gnn
     if s <= 0:
-        # fallback to equal weights for present components
-        present = [k for k, v in [("text", t), ("cnn", c), ("gnn", g)] if v is not None]
-        if len(present) == 0:
-            w_text, w_cnn, w_gnn = 1.0, 0.0, 0.0
-        else:
-            w_text = 1.0 if t is not None else 0.0
-            w_cnn = 0.0
-            w_gnn = 0.0
-        s = w_text + w_cnn + w_gnn
+        # fallback if all components are missing
+        w_text, w_cnn, w_gnn = 1.0, 0.0, 0.0
+        s = 1.0
 
     # normalize weights
     w_text /= s
