@@ -511,14 +511,14 @@
       if (autoToggle) {
         try {
           if (hasChromeApi("storage") && chrome.storage && chrome.storage.local) {
-            chrome.storage.local.get(["phishingproto_auto_analyze"], (items) => {
-              try { autoToggle.checked = !!(items && items.phishingproto_auto_analyze); } catch (e) {}
+            chrome.storage.local.get(["phishfree_auto_analyze"], (items) => {
+              try { autoToggle.checked = !!(items && items.phishfree_auto_analyze); } catch (e) {}
             });
           }
         } catch (e) { console.warn("Failed to read auto-analyze pref:", e); }
         autoToggle.addEventListener("change", (e) => {
           try {
-            if (hasChromeApi("storage") && chrome.storage && chrome.storage.local) chrome.storage.local.set({ phishingproto_auto_analyze: !!e.target.checked });
+            if (hasChromeApi("storage") && chrome.storage && chrome.storage.local) chrome.storage.local.set({ phishfree_auto_analyze: !!e.target.checked });
             showToast(`Auto-analyze ${e.target.checked ? 'enabled' : 'disabled'}`);
           } catch (err) { console.error("Failed to save auto-analyze pref:", err); }
         });

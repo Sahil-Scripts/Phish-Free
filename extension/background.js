@@ -1,4 +1,4 @@
-// background.js - PhishingProto background/service worker
+// background.js - PhishFree background/service worker
 // Updated: preserves original behavior but adds explicit run_models handling
 // so content script can request targeted runs (cnn / gnn) and get predictable payloads.
 
@@ -186,7 +186,7 @@ console.debug("[background] analyze_page -> forcing /analyze/multi run_models:",
 
   if (message.action === "open_popup_for_url") {
     const url = message.url;
-    chrome.storage.local.set({ phishingproto_last_requested_url: url }, () => {
+    chrome.storage.local.set({ phishfree_last_requested_url: url }, () => {
       try {
         if (chrome.action && chrome.action.openPopup) {
           chrome.action.openPopup();

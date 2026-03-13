@@ -42,7 +42,7 @@
   // ---------------------------
   function sessionDismissed(hostname) {
     try {
-      return sessionStorage.getItem("phishingproto.dismissed:" + hostname) === "1";
+      return sessionStorage.getItem("phishfree.dismissed:" + hostname) === "1";
     } catch (e) {
       return false;
     }
@@ -50,14 +50,14 @@
   
   function siteReportedSafe(hostname) {
     try {
-      return sessionStorage.getItem("phishingproto.reported_safe:" + hostname) === "1";
+      return sessionStorage.getItem("phishfree.reported_safe:" + hostname) === "1";
     } catch (e) {
       return false;
     }
   }
   function setSessionDismissed(hostname) {
     try {
-      sessionStorage.setItem("phishingproto.dismissed:" + hostname, "1");
+      sessionStorage.setItem("phishfree.dismissed:" + hostname, "1");
     } catch (e) { /* ignore */ }
   }
 
@@ -323,7 +323,7 @@ payload.domain = window.location.hostname || payload.hostname || "";
   // Banner injection (updated)
   // ---------------------------
   const BANNER_AUTO_HIDE_MS = 15000; // 15s auto-hide default
-  let _phishingproto_banner_timer = null;
+  let _phishfree_banner_timer = null;
 
   function injectBanner(result) {
     try {
@@ -373,9 +373,9 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
 
       // create root banner
       const banner = document.createElement("div");
-      banner.id = "phishingproto-banner";
+      banner.id = "phishfree-banner";
       banner.setAttribute("role", "region");
-      banner.setAttribute("aria-label", "Phishing warning from PhishingProto");
+      banner.setAttribute("aria-label", "Phishing warning from PhishFree");
       banner.style.position = "fixed";
       banner.style.top = "0";
       banner.style.left = "0";
@@ -390,7 +390,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
 
       // wrapper (visual)
       const wrap = document.createElement("div");
-      wrap.className = "phishingproto-wrap";
+      wrap.className = "phishfree-wrap";
       wrap.style.width = "100%";
       wrap.style.maxWidth = "1600px";
       wrap.style.margin = "0 auto";
@@ -427,7 +427,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
       left.style.minWidth = "220px";
       left.style.flex = "0 0 auto";
       left.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
-                          <strong style="font-size:16px;font-weight:800">PhishingProto</strong>
+                          <strong style="font-size:16px;font-weight:800">PhishFree</strong>
                           <span style="background:rgba(255,255,255,0.08);padding:6px 8px;border-radius:8px;font-weight:700;font-size:12px">${escapeHtml(advice.headline)}</span>
                         </div>
                         ${modelMini}
@@ -442,7 +442,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
       center.style.minWidth = "240px";
 
       const list = document.createElement("ul");
-      list.className = "phishingproto-list";
+      list.className = "phishfree-list";
       list.style.margin = "0";
       list.style.paddingLeft = "18px";
       list.style.listStyle = "disc";
@@ -561,7 +561,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
 
       // Details button (existing behavior)
       const detailsBtn = document.createElement("button");
-      detailsBtn.className = "phishingproto-btn";
+      detailsBtn.className = "phishfree-btn";
       detailsBtn.textContent = "Details";
       detailsBtn.style.padding = "8px 12px";
       detailsBtn.style.borderRadius = "8px";
@@ -578,7 +578,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
       
 
       const reportBtn = document.createElement("button");
-      reportBtn.className = "phishingproto-btn outline";
+      reportBtn.className = "phishfree-btn outline";
       reportBtn.textContent = "Report Safe";
       reportBtn.style.padding = "8px 12px";
       reportBtn.style.borderRadius = "8px";
@@ -603,7 +603,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
               reportBtn.textContent = "Reported ✓";
               // Store in session storage that this site was reported safe
               try {
-                sessionStorage.setItem("phishingproto.reported_safe:" + window.location.hostname, "1");
+                sessionStorage.setItem("phishfree.reported_safe:" + window.location.hostname, "1");
               } catch (e) { /* ignore */ }
               setTimeout(() => { reportBtn.textContent = "Report Safe"; }, 2500);
             } else {
@@ -621,7 +621,7 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
       });
 
       const dismissBtn = document.createElement("button");
-      dismissBtn.className = "phishingproto-btn outline small";
+      dismissBtn.className = "phishfree-btn outline small";
       dismissBtn.textContent = "Dismiss (this session)";
       dismissBtn.style.padding = "6px 8px";
       dismissBtn.style.borderRadius = "8px";
@@ -665,31 +665,31 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
       });
 
       // Auto-hide behavior (clear any old timer)
-      if (_phishingproto_banner_timer) {
-        clearTimeout(_phishingproto_banner_timer);
-        _phishingproto_banner_timer = null;
+      if (_phishfree_banner_timer) {
+        clearTimeout(_phishfree_banner_timer);
+        _phishfree_banner_timer = null;
       }
       if (BANNER_AUTO_HIDE_MS > 0) {
-        _phishingproto_banner_timer = setTimeout(() => {
+        _phishfree_banner_timer = setTimeout(() => {
           removeBanner();
         }, BANNER_AUTO_HIDE_MS);
       }
 
       // Pause auto-hide on hover or focus within banner
       banner.addEventListener("mouseenter", () => {
-        if (_phishingproto_banner_timer) {
-          clearTimeout(_phishingproto_banner_timer);
-          _phishingproto_banner_timer = null;
+        if (_phishfree_banner_timer) {
+          clearTimeout(_phishfree_banner_timer);
+          _phishfree_banner_timer = null;
         }
       });
       banner.addEventListener("mouseleave", () => {
-        if (BANNER_AUTO_HIDE_MS > 0 && !_phishingproto_banner_timer) {
-          _phishingproto_banner_timer = setTimeout(() => removeBanner(), BANNER_AUTO_HIDE_MS);
+        if (BANNER_AUTO_HIDE_MS > 0 && !_phishfree_banner_timer) {
+          _phishfree_banner_timer = setTimeout(() => removeBanner(), BANNER_AUTO_HIDE_MS);
         }
       });
 
       // diagnostics marker
-      try { sessionStorage.setItem("phishingproto.lastShown", window.location.href); } catch (e) { /* ignore */ }
+      try { sessionStorage.setItem("phishfree.lastShown", window.location.href); } catch (e) { /* ignore */ }
 
     } catch (err) {
       console.error("injectBanner error", err);
@@ -698,20 +698,20 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
 
   function removeBanner() {
     try {
-      const existing = document.getElementById("phishingproto-banner");
+      const existing = document.getElementById("phishfree-banner");
       if (existing) {
         // animate out smoothly then remove
         existing.style.transform = "translateY(-120%)";
-        if (_phishingproto_banner_timer) {
-          clearTimeout(_phishingproto_banner_timer);
-          _phishingproto_banner_timer = null;
+        if (_phishfree_banner_timer) {
+          clearTimeout(_phishfree_banner_timer);
+          _phishfree_banner_timer = null;
         }
         // remove after animation time (match transition 330ms)
         setTimeout(() => {
           try { existing.remove(); } catch (e) {}
         }, 360);
       }
-      if (window._phishingproto_banner_injected) delete window._phishingproto_banner_injected;
+      if (window._phishfree_banner_injected) delete window._phishfree_banner_injected;
     } catch (e) {
       console.error("[content] removeBanner failed:", e);
     }
@@ -722,9 +722,9 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
   // ---------------------------
   (async function autoRunIfEnabled() {
     try {
-      chrome.storage.local.get(["phishingproto_auto_analyze"], (items) => {
-        const prefVal = items && Object.prototype.hasOwnProperty.call(items, "phishingproto_auto_analyze")
-                         ? !!items.phishingproto_auto_analyze
+      chrome.storage.local.get(["phishfree_auto_analyze"], (items) => {
+        const prefVal = items && Object.prototype.hasOwnProperty.call(items, "phishfree_auto_analyze")
+                         ? !!items.phishfree_auto_analyze
                          : true;
         const enabled = prefVal;
         console.debug("[content] auto-analyze preference:", enabled);

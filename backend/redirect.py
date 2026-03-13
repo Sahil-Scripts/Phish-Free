@@ -6,7 +6,7 @@ from typing import Dict, Any
 from functools import lru_cache
 
 REQUEST_TIMEOUT = 8.0
-HEADERS = {"User-Agent": "PhishProto-Analyzer/1.0"}
+HEADERS = {"User-Agent": "PhishFree-Analyzer/1.0"}
 
 def follow_redirects(url: str, max_hops: int = 8) -> Dict[str, Any]:
     """

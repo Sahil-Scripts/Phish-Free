@@ -2,7 +2,7 @@
 <html lang="en">
 <head>
   <meta charset="utf-8" />
-  <title>PhishProto — Dashboard</title>
+  <title>PhishFree — Dashboard</title>
   <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
   <style>
     :root {
@@ -589,14 +589,13 @@
     }
 
     /* pulse animation for attention */
-    @keyframes phishingproto-pulse {
-      0% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0.3); }
-      70% { box-shadow: 0 0 0 10px rgba(67, 97, 238, 0); }
-      100% { box-shadow: 0 0 0 0 rgba(67, 97, 238, 0); }
+    @keyframes phishfree-pulse {
+      0% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.1); opacity: 0.8; }
+      100% { transform: scale(1); opacity: 1; }
     }
-
-    .pulse {
-      animation: phishingproto-pulse 1.5s infinite;
+    .pulse-ai {
+      animation: phishfree-pulse 1.5s infinite;
     }
 
     /* Anchor status and truncation helpers */
@@ -737,7 +736,7 @@
           <path d="M12 16.5C14.4853 16.5 16.5 14.4853 16.5 12C16.5 9.51472 14.4853 7.5 12 7.5C9.51472 7.5 7.5 9.51472 7.5 12C7.5 14.4853 9.51472 16.5 12 16.5Z" stroke="#4361ee" stroke-width="2"/>
           <path d="M12 13.5C12.8284 13.5 13.5 12.8284 13.5 12C13.5 11.1716 12.8284 10.5 12 10.5C11.1716 10.5 10.5 11.1716 10.5 12C10.5 12.8284 11.1716 13.5 12 13.5Z" fill="#4361ee"/>
         </svg>
-        <h1>PhishProto Dashboard</h1>
+        <h1>PhishFree Dashboard</h1>
       </div>
       <div class="muted">Real-time phishing detection analytics</div>
     </div>
@@ -1965,7 +1964,7 @@
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      const filename = `phishproto_report_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
+      const filename = `phishfree_report_${new Date().toISOString().slice(0,19).replace(/[:T]/g,'-')}.csv`;
       a.download = filename;
       document.body.appendChild(a);
       a.click();

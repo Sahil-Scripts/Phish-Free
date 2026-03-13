@@ -1,6 +1,6 @@
-# 🛡️ PhishProto — Real-Time AI/ML-Based Phishing Detection
+# 🛡️ PhishFree — Real-Time AI/ML-Based Phishing Detection
 
-PhishProto is a **real-time phishing detection and prevention system** built for the **Smart India Hackathon (SIH)**. It integrates multi-modal AI analysis (Text, Vision, Graph) to protect users from phishing websites in real-time.
+PhishFree is a **real-time phishing detection and prevention system** built for the **Smart India Hackathon (SIH)**. It integrates multi-modal AI analysis (Text, Vision, Graph) to protect users from phishing websites in real-time.
 
 ---
 

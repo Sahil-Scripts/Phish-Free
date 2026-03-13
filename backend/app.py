@@ -1,4 +1,4 @@
-# backend/app.py - PhishingProto backend (complete with anchor fixes)
+# backend/app.py - PhishFree backend (complete with anchor fixes)
 import os
 import csv
 import re
@@ -456,7 +456,7 @@ def report_false_positive():
 # --- Health + ping ---
 @app.route("/health", methods=["GET"])
 def health():
-    return jsonify({"status": "OK", "service": "phish-proto-backend"})
+    return jsonify({"status": "OK", "service": "phish-free-backend"})
 
 @app.route("/ping", methods=["POST"])
 def ping():

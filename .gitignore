@@ -16,6 +16,7 @@ backend/aggregate_log.csv
 backend/anchors.csv
 backend/anchors.csv.bak
 backend/false_positives.csv
+backend/static/screenshots/
 *.log
 
 # IDE/editor
@@ -44,4 +45,4 @@ docker-compose.override.yml
 
 # Mac / Windows
 ehthumbs.db
-Icon?
+# Icon? (Commonly used by macOS, but currently ignoring project icons)
