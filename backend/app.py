@@ -557,6 +557,31 @@ def aggregate_report():
             data.append(normalized_row)
         return jsonify(data)
 
+@app.route("/aggregate/report", methods=["DELETE"])
+def clear_logs():
+    if not os.path.exists(AGG_LOG):
+        return jsonify({"ok": True, "message": "No logs to clear"})
+        
+    ts_to_delete = request.args.get("timestamp")
+    try:
+        if ts_to_delete:
+            with open(AGG_LOG, "r", encoding="utf-8") as f:
+                rows = list(csv.reader(f))
+            
+            # Keep header (index 0) and rows that do not match the target timestamp
+            new_rows = [row for i, row in enumerate(rows) if i == 0 or (len(row) > 0 and row[0] != ts_to_delete)]
+            
+            with open(AGG_LOG, "w", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerows(new_rows)
+            return jsonify({"ok": True, "message": f"Log entry {ts_to_delete} deleted successfully"})
+        else:
+            headers = ["timestamp", "url", "domain", "text_score", "cnn_score", "gnn_score", "combined_score", "label", "text_excerpt", "combined_reasons", "screenshot_url"]
+            with open(AGG_LOG, "w", newline="", encoding="utf-8") as f:
+                csv.writer(f).writerow(headers)
+            return jsonify({"ok": True, "message": "Logs cleared successfully"})
+    except Exception as e:
+        return jsonify({"ok": False, "error": str(e)}), 500
+
 @app.route("/aggregate/top_domains", methods=["GET"])
 def top_domains():
     if not os.path.exists(AGG_LOG): return jsonify({"data":[]})

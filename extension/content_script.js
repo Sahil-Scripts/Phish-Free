@@ -359,34 +359,70 @@ try {
   if (ng !== null) _gnn_pct = `${Math.round(ng*100)}%`;
 } catch (e) { /* ignore */ }
 
-// We'll show these next to the title in a compact way by injecting small spans
-const modelMini = `<div style="margin-left:8px;font-size:12px;opacity:0.95">
-  <span style="margin-right:8px">Visual: <strong>${_cnn_pct}</strong></span>
-  <span>Graph: <strong>${_gnn_pct}</strong></span>
-</div>`;
+// Hidden model details for cleaner user experience
+const modelMini = "";
 
 // Add reported safe indicator
 const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;color:rgba(255,255,255,0.9);background:rgba(0,255,0,0.2);padding:2px 6px;border-radius:4px;display:inline-block;">✓ Reported Safe</div>` : '';
 
-      const bullets = [];
+      let bullets = [];
       const rawReasons = result.combined_reasons || result.reasons || [];
       
       if (Array.isArray(rawReasons) && rawReasons.length > 0) {
-        // use specific reasons from backend models
-        rawReasons.forEach(r => bullets.push(r));
-      } else {
+        // filter out analyst/debugger logs and clean up text for normal users
+        rawReasons.forEach(r => {
+          const text = (r || '').toString().trim();
+          if (!text) return;
+          const lower = text.toLowerCase();
+          // Filter out heavy analyst data outputs
+          if (lower.includes('score=') || lower.includes('weights(') || lower.includes('components(') || lower.includes('text model') || lower.includes('visual model') || lower.includes('established domain') || lower.includes('cnn') || lower.includes('gnn')) {
+             return;
+          }
+          let cleanText = text.replace(/^AI Agent:\s*/i, '');
+          if (cleanText) bullets.push(cleanText);
+        });
+      }
+      
+      if (!bullets.length) {
         // fallback to precanned text
         const threats = buildThreatPaths(result);
         if (threats.length) bullets.push(...threats);
       }
 
       // try parsing domain age from common backend fields
-      const age = result.domain_age_days ?? result.domain_age ?? (result.whois && result.whois.age_days) ?? (result.url && result.url.domain_age_days) ?? (result.features && result.features.domain_age_days);
+      const age = result.domain_age_days ?? result.domain_age ?? (result.whois && result.whois.age_days) ?? (result.url && result.url.domain_age_days) ?? (result.url && result.url.components && result.url.components.whois && result.url.components.whois.age_days) ?? (result.features && result.features.domain_age_days);
+      
+      let parsedAgeText = "Unknown";
       if (age !== undefined && age !== null && age >= 0) {
-        bullets.push(`Domain Age: ${age} days`);
+        const years = Math.floor(age / 365);
+        const months = Math.floor((age % 365) / 30);
+        const days = Math.floor((age % 365) % 30);
+        
+        let ageParts = [];
+        if (years > 0) ageParts.push(`${years}y`);
+        if (months > 0) ageParts.push(`${months}m`);
+        if (days > 0 || (years === 0 && months === 0)) ageParts.push(`${days}d`);
+        
+        parsedAgeText = ageParts.join(' ');
+        
+        // Remove existing age-related messages to prevent duplicates
+        bullets = bullets.filter(b => !b.toLowerCase().includes('domain (age:') && !b.toLowerCase().includes('domain age:'));
       }
       
-      if (!bullets.length) bullets.push("Analysis complete. No immediate specific risk signals.");
+      let ipValue = "N/A";
+      let locationValue = "N/A";
+      try {
+        if (result.url && result.url.components && result.url.components.asn) {
+           ipValue = result.url.components.asn.ip || "N/A";
+           const cc = result.url.components.asn.asn_country;
+           if (cc) {
+               // Translate country code to emoji flag visually if possible, or just string.
+               locationValue = cc;
+           }
+        }
+      } catch(e){}
+      
+      if (!bullets.length) bullets.push("Analysis complete. Site looks generally safe.");
 
       // create root banner
       const banner = document.createElement("div");
@@ -394,30 +430,38 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
       banner.setAttribute("role", "region");
       banner.setAttribute("aria-label", "Phishing warning from PhishFree");
       banner.style.position = "fixed";
-      banner.style.top = "0";
-      banner.style.left = "0";
-      banner.style.right = "0";
+      banner.style.top = "16px";
+      banner.style.left = "50%";
       banner.style.zIndex = "2147483647";
       banner.style.display = "flex";
       banner.style.justifyContent = "center";
       banner.style.pointerEvents = "auto";
-      banner.style.transform = "translateY(-120%)";
-      banner.style.transition = "transform 330ms cubic-bezier(.2,9,2,1)";
-      banner.style.backdropFilter = "saturate(120%) blur(0.6px)";
+      banner.style.transform = "translate(-50%, -150%) scale(0.9)";
+      banner.style.opacity = "0";
+      banner.style.transition = "all 500ms cubic-bezier(0.175, 0.885, 0.32, 1.275)";
 
-      // wrapper (visual)
+      // Minimalist wrapper (visual)
       const wrap = document.createElement("div");
       wrap.className = "phishfree-wrap";
-      wrap.style.width = "100%";
-      wrap.style.maxWidth = "1600px";
-      wrap.style.margin = "0 auto";
+      wrap.style.margin = "0";
       wrap.style.display = "flex";
-      wrap.style.alignItems = "flex-start";
-      wrap.style.gap = "12px";
-      wrap.style.padding = "14px 18px";
+      wrap.style.flexDirection = "column";
+      wrap.style.alignItems = "stretch";
+      wrap.style.padding = "6px 12px 6px 16px";
+      wrap.style.borderRadius = "30px";
       wrap.style.boxSizing = "border-box";
       wrap.style.color = "#fff";
-      wrap.style.boxShadow = "0 2px 6px rgba(0,0,0,0.2)";
+      wrap.style.boxShadow = "0 8px 32px rgba(0,0,0,0.25), 0 2px 8px rgba(0,0,0,0.15)";
+      wrap.style.backdropFilter = "saturate(150%) blur(12px)";
+      wrap.style.border = "1px solid rgba(255,255,255,0.15)";
+      wrap.style.transition = "border-radius 0.3s ease";
+
+      const topWrap = document.createElement("div");
+      topWrap.style.display = "flex";
+      topWrap.style.alignItems = "center";
+      topWrap.style.justifyContent = "space-between";
+      topWrap.style.width = "100%";
+      topWrap.style.gap = "8px";
 
       // typography improvements
       const fontStack = "'Inter', system-ui, -apple-system, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif";
@@ -427,110 +471,138 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
       banner.style.webkitFontSmoothing = "antialiased";
       banner.style.mozOsxFontSmoothing = "grayscale";
       wrap.style.fontFamily = fontStack;
-      wrap.style.fontSize = "15px";
-      wrap.style.lineHeight = "1.35";
+      wrap.style.fontSize = "14px";
+      wrap.style.lineHeight = "1";
 
-      // theme colors
+      // theme colors (more solid colors for minimalistic thin bar)
       if (advice.className === "risk-high") {
-        wrap.style.background = "linear-gradient(90deg,#7f1d1d,#b91c1c)";
+        wrap.style.background = "rgba(220, 38, 38, 0.95)"; // solid red
       } else if (advice.className === "risk-medium") {
-        wrap.style.background = "linear-gradient(90deg,#b45309,#f59e0b)";
+        wrap.style.background = "rgba(217, 119, 6, 0.95)"; // solid amber
       } else {
-        wrap.style.background = "linear-gradient(90deg,#047857,#10b981)";
+        wrap.style.background = "rgba(5, 150, 105, 0.95)"; // solid green
       }
 
-      // Left: title + headline
+      // Left: Logo + Headline
       const left = document.createElement("div");
-      left.style.minWidth = "220px";
-      left.style.flex = "0 0 auto";
-      left.innerHTML = `<div style="display:flex;align-items:center;gap:10px;">
-                          <strong style="font-size:16px;font-weight:800">PhishFree</strong>
-                          <span style="background:rgba(255,255,255,0.08);padding:6px 8px;border-radius:8px;font-weight:700;font-size:12px">${escapeHtml(advice.headline)}</span>
-                        </div>
-                        ${modelMini}
-                        ${safeIndicator}
-                        <div style="margin-top:8px;font-size:13px;opacity:0.98">${escapeHtml(advice.short)}</div>`;
+      left.style.display = "flex";
+      left.style.alignItems = "center";
+      left.style.gap = "12px";
+      
+      const iconSvg = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="width:18px;height:18px;"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>`;
+      
+      left.innerHTML = `
+        <div style="display:flex;align-items:center;opacity:0.9;">${iconSvg}</div>
+        <strong style="font-size:15px;font-weight:700;letter-spacing:-0.3px;">PhishFree</strong>
+        <span style="background:rgba(0,0,0,0.2);padding:4px 8px;border-radius:6px;font-weight:600;font-size:11px;letter-spacing:0.5px;text-transform:uppercase;">${escapeHtml(advice.headline)}</span>
+      `;
 
 
-      // Center: bullets + "what you should do"
+      // Center: single primary reason / advice phrase
       const center = document.createElement("div");
       center.style.flex = "1 1 auto";
-      center.style.padding = "0 14px";
-      center.style.minWidth = "240px";
+      center.style.padding = "0 16px";
+      
+      let primaryReason = bullets[0] || "Analysis complete.";
+      // Clean up primary reason if it's too long
+      if(primaryReason.length > 55) {
+        primaryReason = primaryReason.substring(0, 55) + '...';
+      }
+      
+      center.innerHTML = `
+        <div style="display:flex;align-items:center;gap:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;">
+           <span style="opacity:0.95;font-weight:500;letter-spacing:-0.2px;">${escapeHtml(primaryReason)}</span>
+        </div>
+      `;
 
-      const list = document.createElement("ul");
-      list.className = "phishfree-list";
-      list.style.margin = "0";
-      list.style.paddingLeft = "18px";
-      list.style.listStyle = "disc";
-      list.style.maxHeight = "220px";
-      list.style.overflow = "auto";
-
-      // initially show only first 2 bullets; rest collapsed
-      bullets.forEach((b, i) => {
-        const li = document.createElement("li");
-        li.textContent = b;
-        li.style.margin = "4px 0";
-        if (i >= 2) li.dataset._extra = "1", li.style.display = "none";
-        list.appendChild(li);
-      });
-
-      // === REPLACED expandToggle block: keeps original behavior and adds model details block
-      const expandToggle = document.createElement("button");
-      expandToggle.textContent = bullets.length > 2 ? "View details" : "";
-      expandToggle.style.marginTop = "8px";
-      expandToggle.style.display = bullets.length > 2 ? "inline-block" : "none";
-      expandToggle.style.background = "transparent";
-      expandToggle.style.border = "1px solid rgba(255,255,255,0.12)";
-      expandToggle.style.color = "#fff";
-      expandToggle.style.padding = "6px 8px";
-      expandToggle.style.borderRadius = "8px";
-      expandToggle.style.cursor = "pointer";
-      expandToggle.style.fontWeight = "700";
-
-      expandToggle.addEventListener("click", () => {
-        const showing = expandToggle.dataset.open === "1";
-        const extras = list.querySelectorAll("li[data-_extra='1']");
-        extras.forEach(e => e.style.display = showing ? "none" : "");
-        expandToggle.textContent = showing ? "View details" : "Hide details";
-        expandToggle.dataset.open = showing ? "0" : "1";
-      });
-
-
-
-      const what = document.createElement("div");
-      what.style.marginTop = "8px";
-      what.style.fontSize = "13px";
-      what.style.opacity = "0.95";
-      what.innerHTML = `<strong>What you should do:</strong> ${advice.headline === "High Risk" ? 'Don’t enter passwords or payment info. Close the tab if unsure.' : (advice.headline === "Medium Risk" ? 'Check the URL carefully, do not provide sensitive information.' : 'Proceed with normal caution.')}`;
-
-      center.appendChild(list);
-      center.appendChild(expandToggle);
-      // center.appendChild(detailBox); (Removed)
-      center.appendChild(what);
-
-           // Right: actions
+      // Right: minimalist actions (Details, Dismiss)
       const actions = document.createElement("div");
       actions.style.display = "flex";
-      actions.style.flexDirection = "column";
+      actions.style.alignItems = "center";
       actions.style.gap = "8px";
-      actions.style.minWidth = "160px";
-      actions.style.alignItems = "flex-end";
 
-      // Details button (existing behavior)
+      // Details drawer container
+      const detailsContainer = document.createElement("div");
+      detailsContainer.style.width = "100%";
+      detailsContainer.style.maxHeight = "0px";
+      detailsContainer.style.overflow = "hidden";
+      detailsContainer.style.transition = "max-height 0.3s ease, margin-top 0.3s ease, opacity 0.3s ease";
+      detailsContainer.style.opacity = "0";
+      
+      const detailsContent = document.createElement("div");
+      detailsContent.style.paddingTop = "12px";
+      detailsContent.style.borderTop = "1px solid rgba(255,255,255,0.15)";
+      detailsContent.style.marginTop = "12px";
+      detailsContent.style.fontSize = "13px";
+      detailsContent.style.lineHeight = "1.5";
+      detailsContent.style.paddingBottom = "4px";
+      
+      // Cool Data Grid for Layman
+      const dataGrid = document.createElement("div");
+      dataGrid.style.display = "grid";
+      dataGrid.style.gridTemplateColumns = "repeat(3, 1fr)";
+      dataGrid.style.gap = "8px";
+      dataGrid.style.marginBottom = "14px";
+      dataGrid.style.background = "rgba(0,0,0,0.15)";
+      dataGrid.style.padding = "10px";
+      dataGrid.style.borderRadius = "8px";
+      dataGrid.style.textAlign = "center";
+      
+      const makeCol = (label, val) => `
+        <div style="display:flex; flex-direction:column; gap:2px;">
+           <span style="font-size:10px;text-transform:uppercase;letter-spacing:0.5px;opacity:0.7;">${label}</span>
+           <span style="font-size:14px;font-weight:600;opacity:1;">${val}</span>
+        </div>
+      `;
+      dataGrid.innerHTML = makeCol("Age", parsedAgeText) + makeCol("IP Address", ipValue) + makeCol("Origin", locationValue);
+      detailsContent.appendChild(dataGrid);
+      
+      const list = document.createElement("ul");
+      list.style.margin = "0";
+      list.style.paddingLeft = "24px";
+      bullets.forEach(b => {
+        const li = document.createElement("li");
+        li.textContent = b;
+        li.style.margin = "6px 0";
+        list.appendChild(li);
+      });
+      
+      const what = document.createElement("div");
+      what.style.marginTop = "12px";
+      what.innerHTML = `<strong style="opacity:1;">Recommendation:</strong> <span style="opacity:0.9;">${advice.headline === "High Risk" ? 'Do not enter passwords or payment info. Close the tab if unsure.' : (advice.headline === "Medium Risk" ? 'Check the URL carefully, do not provide sensitive information.' : 'Proceed with normal caution.')}</span>`;
+      
+      detailsContent.appendChild(list);
+      detailsContent.appendChild(what);
+      detailsContainer.appendChild(detailsContent);
+
+      // Details button
       const detailsBtn = document.createElement("button");
-      detailsBtn.className = "phishfree-btn";
       detailsBtn.textContent = "Details";
-      detailsBtn.style.padding = "8px 12px";
-      detailsBtn.style.borderRadius = "8px";
+      detailsBtn.style.padding = "6px 14px";
+      detailsBtn.style.borderRadius = "20px";
       detailsBtn.style.border = "none";
       detailsBtn.style.cursor = "pointer";
-      detailsBtn.style.background = "rgba(255,255,255,0.12)";
+      detailsBtn.style.background = "rgba(0,0,0,0.2)";
       detailsBtn.style.color = "#fff";
-      detailsBtn.style.fontWeight = "700";
+      detailsBtn.style.fontWeight = "600";
+      detailsBtn.style.fontSize = "12px";
+      detailsBtn.style.transition = "background 0.2s";
+      detailsBtn.onmouseover = () => detailsBtn.style.background = "rgba(0,0,0,0.3)";
+      detailsBtn.onmouseleave = () => detailsBtn.style.background = "rgba(0,0,0,0.2)";
       detailsBtn.addEventListener("click", () => {
-        console.debug("[content] detailsBtn clicked for", window.location.href);
-        chrome.runtime.sendMessage({ action: "open_popup_for_url", url: window.location.href }, (resp) => {});
+        const isOpen = detailsContainer.style.maxHeight !== "0px" && detailsContainer.style.maxHeight !== "";
+        if (isOpen) {
+          detailsContainer.style.maxHeight = "0px";
+          detailsContainer.style.opacity = "0";
+          wrap.style.borderRadius = "30px";
+          detailsBtn.textContent = "Details";
+        } else {
+           // Provide enough height
+          detailsContainer.style.maxHeight = "300px";
+          detailsContainer.style.opacity = "1";
+          wrap.style.borderRadius = "16px";
+          detailsBtn.textContent = "Hide";
+        }
       });
 
       
@@ -578,48 +650,48 @@ const safeIndicator = reportedSafe ? `<div style="margin-top:4px;font-size:12px;
         }
       });
 
+      // Dismiss (X) button
       const dismissBtn = document.createElement("button");
-      dismissBtn.className = "phishfree-btn outline small";
-      dismissBtn.textContent = "Dismiss (this session)";
-      dismissBtn.style.padding = "6px 8px";
-      dismissBtn.style.borderRadius = "8px";
+      dismissBtn.innerHTML = `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="width:16px;height:16px;"><path d="M18 6L6 18M6 6l12 12"/></svg>`;
+      dismissBtn.style.padding = "6px";
+      dismissBtn.style.borderRadius = "50%";
       dismissBtn.style.cursor = "pointer";
       dismissBtn.style.background = "transparent";
       dismissBtn.style.color = "#fff";
-      dismissBtn.style.border = "1px solid rgba(255,255,255,0.18)";
-      dismissBtn.style.fontWeight = "700";
+      dismissBtn.style.border = "none";
+      dismissBtn.style.display = "flex";
+      dismissBtn.style.alignItems = "center";
+      dismissBtn.style.justifyContent = "center";
+      dismissBtn.style.opacity = "0.7";
+      dismissBtn.style.transition = "opacity 0.2s, background 0.2s";
+      dismissBtn.onmouseover = () => { dismissBtn.style.opacity = "1"; dismissBtn.style.background = "rgba(255,255,255,0.1)"; };
+      dismissBtn.onmouseleave = () => { dismissBtn.style.opacity = "0.7"; dismissBtn.style.background = "transparent"; };
+      dismissBtn.setAttribute("aria-label", "Dismiss");
       dismissBtn.addEventListener("click", () => {
         setSessionDismissed(window.location.hostname);
         removeBanner();
       });
 
-      // Make buttons visually consistent
-      [detailsBtn, reportBtn, dismissBtn, expandToggle].forEach(btn => {
-        try {
-          btn.style.fontFamily = fontStack;
-          btn.style.fontWeight = "700";
-          btn.style.fontSize = "14px";
-        } catch (_) {}
-      });
-
-      // Append actions in logical order: Details, Report, Dismiss
+      // Append actions
       actions.appendChild(detailsBtn);
-      actions.appendChild(reportBtn);
       actions.appendChild(dismissBtn);
 
+      topWrap.appendChild(left);
+      topWrap.appendChild(center);
+      topWrap.appendChild(actions);
 
-      wrap.appendChild(left);
-      wrap.appendChild(center);
-      wrap.appendChild(actions);
+      wrap.appendChild(topWrap);
+      wrap.appendChild(detailsContainer);
 
       banner.appendChild(wrap);
 
       // Insert at top of documentElement (fixed overlay), avoids layout shifts
       document.documentElement.prepend(banner);
 
-      // trigger slide-in
+      // trigger pop-up slide-in
       window.requestAnimationFrame(() => {
-        banner.style.transform = "translateY(0)";
+        banner.style.transform = "translate(-50%, 0) scale(1)";
+        banner.style.opacity = "1";
       });
 
       // Auto-hide behavior (clear any old timer)

@@ -829,6 +829,12 @@
               </svg>
               Export CSV
             </button>
+            <button id="clearLogsBtn" class="btn btn-outline" style="color:var(--danger, #f72585); border-color:rgba(247, 37, 133, 0.3);">
+              <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" stroke-width="2">
+                <path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+              </svg>
+              Clear Logs
+            </button>
             <span id="dashboardStatus" class="status-text"></span>
             <!-- Anchor controls -->
             <button id="anchorNowBtn" class="btn btn-outline">Anchor Last 50 Rows</button>
@@ -1543,7 +1549,10 @@
       const ssUrl = row.screenshot_url || '';
       const ssHtml = ssUrl ? `<a href="${ssUrl}" target="_blank" style="display:inline-flex;align-items:center;padding:4px 8px;background:var(--primary-light);color:var(--primary);text-decoration:none;font-weight:600;border-radius:6px;font-size:12px;transition:0.2s;"><svg viewBox="0 0 24 24" width="14" height="14" stroke="currentColor" stroke-width="2" fill="none" style="margin-right:4px;"><rect x="3" y="3" width="18" height="18" rx="2" ry="2"></rect><circle cx="8.5" cy="8.5" r="1.5"></circle><polyline points="21 15 16 10 5 21"></polyline></svg>View</a>` : '<span class="muted">—</span>';
       
-      tr.innerHTML = `<td>${timeStr}</td><td><span class="badge badge-${label}">${label.toUpperCase()}</span></td><td>${scoreHtml}</td><td>${llmHtml}</td><td>${cnnHtml}</td><td>${gnnHtml}</td><td style="text-align:center;">${ssHtml}</td><td title="${escapeHtml(displayText)}">${escapeHtml(displayText)}</td><td title="${escapeHtml(String(rawReasons))}">${escapeHtml(String(reasonsShort))}</td>`;
+      const tsVal = escapeHtml(row.timestamp || '');
+      const delHtml = `<button onclick="deleteLogViaFetch(event, '${tsVal}')" title="Delete Log" style="margin-left:8px;background:transparent;border:none;cursor:pointer;color:var(--danger, #f72585);padding:4px;"><svg viewBox="0 0 24 24" width="16" height="16" stroke="currentColor" stroke-width="2" fill="none"><path d="M3 6h18M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg></button>`;
+
+      tr.innerHTML = `<td>${timeStr}</td><td><span class="badge badge-${label}">${label.toUpperCase()}</span></td><td>${scoreHtml}</td><td>${llmHtml}</td><td>${cnnHtml}</td><td>${gnnHtml}</td><td style="text-align:center;">${ssHtml}${delHtml}</td><td title="${escapeHtml(displayText)}">${escapeHtml(displayText)}</td><td title="${escapeHtml(String(rawReasons))}">${escapeHtml(String(reasonsShort))}</td>`;
       if (highlightHost) {
         const rowUrl = (row.url || "").toString();
         try {
@@ -1977,17 +1986,64 @@
   }
 
   // ---------------------------
+  // Clear Logs helper
+  // ---------------------------
+  async function clearLogsViaFetch() {
+    if (!confirm("Are you sure you want to permanently delete all logs? This cannot be undone.")) return;
+    
+    const statusEl = document.getElementById('dashboardStatus');
+    try {
+      if (statusEl) statusEl.textContent = 'Clearing logs...';
+      const resp = await fetch('/aggregate/report', { method: 'DELETE' });
+      if (!resp.ok) {
+        throw new Error('Server returned ' + resp.status);
+      }
+      if (statusEl) statusEl.textContent = 'Logs cleared';
+      // refresh UI
+      init();
+    } catch (e) {
+      console.error('clearLogs error', e);
+      if (statusEl) statusEl.textContent = 'Clear failed';
+    }
+  }
+
+  // ---------------------------
+  // Delete Single Log helper
+  // ---------------------------
+  async function deleteLogViaFetch(event, timestamp) {
+    if (event) event.stopPropagation();
+    if (!timestamp) return;
+    if (!confirm("Delete this log entry?")) return;
+    
+    const statusEl = document.getElementById('dashboardStatus');
+    try {
+      if (statusEl) statusEl.textContent = 'Deleting log...';
+      const resp = await fetch('/aggregate/report?timestamp=' + encodeURIComponent(timestamp), { method: 'DELETE' });
+      if (!resp.ok) throw new Error('Server returned ' + resp.status);
+      if (statusEl) statusEl.textContent = 'Log deleted';
+      init();
+    } catch (e) {
+      console.error('delete log error', e);
+      if (statusEl) statusEl.textContent = 'Delete failed';
+    }
+  }
+
+  window.deleteLogViaFetch = deleteLogViaFetch;
+
+  // ---------------------------
   // Wiring after DOM ready
   // ---------------------------
   document.addEventListener('DOMContentLoaded', () => {
     const refreshBtn = document.getElementById('refreshBtn');
     const downloadBtn = document.getElementById('downloadCsvBtn');
+    const clearLogsBtn = document.getElementById('clearLogsBtn');
     const labelFilter = document.getElementById('labelFilter');
     const dateFrom = document.getElementById('dateFrom');
     const dateTo = document.getElementById('dateTo');
 
     if (refreshBtn) refreshBtn.addEventListener('click', init);
     if (downloadBtn) downloadBtn.addEventListener('click', (e) => { e.preventDefault(); downloadCsvViaFetch(); });
+    if (clearLogsBtn) clearLogsBtn.addEventListener('click', (e) => { e.preventDefault(); clearLogsViaFetch(); });
     if (labelFilter) labelFilter.addEventListener('change', applyFilters);
     if (dateFrom) dateFrom.addEventListener('change', applyFilters);
     if (dateTo) dateTo.addEventListener('change', applyFilters);
